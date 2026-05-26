@@ -3,12 +3,11 @@ import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { io, Socket } from 'socket.io-client';
 import { Phone, PhoneOff, Mic, MicOff, Video as VideoIcon, VideoOff } from 'lucide-react-native';
-// IMPORT THƯ VIỆN WEBRTC (Tạm ẩn để chạy Web)
-// import { RTCPeerConnection, RTCIceCandidate, RTCSessionDescription, mediaDevices, RTCView } from 'react-native-webrtc';
+import { RTCPeerConnection, RTCIceCandidate, RTCSessionDescription, mediaDevices, RTCView } from 'react-native-webrtc';
 
 const translations = {
-    vi: { chat: "Tin nhắn", contact: "Danh bạ", settings: "Cài đặt", lang: "Ngôn ngữ: Tiếng Việt", theme: "Giao diện: Tối", save: "Lưu hồ sơ", logout: "Đăng xuất", email: "Email", password: "Mật khẩu", forgotPass: "Quên mật khẩu?", login: "Đăng nhập", noAccount: "Chưa có tài khoản?", register: "Đăng ký ngay", search: "Tìm kiếm...", addFriend: "Thêm bạn", online: "Trực tuyến", offline: "Ngoại tuyến", friendRequests: "Lời mời kết bạn", searchFriend: "Nhập email tìm bạn...", searchBtn: "Tìm", friends: "BẠN BÈ", pending: "CHỜ XÁC NHẬN", sent: "ĐÃ GỬI", emptyList: "Danh sách trống." },
-    en: { chat: "Messages", contact: "Contacts", settings: "Settings", lang: "Language: English", theme: "Theme: Dark", save: "Save Profile", logout: "Logout", email: "Email", password: "Password", forgotPass: "Forgot Password?", login: "Login", noAccount: "Don't have an account?", register: "Register now", search: "Search...", addFriend: "Add Friend", online: "Online", offline: "Offline", friendRequests: "Friend Requests", searchFriend: "Enter email to search...", searchBtn: "Search", friends: "FRIENDS", pending: "PENDING", sent: "SENT", emptyList: "List is empty." }
+    vi: { chat: "Tin nhắn", contact: "Danh bạ", settings: "Cài đặt", lang: "Ngôn ngữ: Tiếng Việt", theme: "Giao diện: Tối", save: "Lưu hồ sơ", logout: "Đăng xuất", email: "Email", password: "Mật khẩu", forgotPass: "Quên mật khẩu?", login: "Đăng nhập", noAccount: "Chưa có tài khoản?", register: "Đăng ký ngay", search: "Tìm kiếm...", addFriend: "Thêm bạn", online: "Trực tuyến", offline: "Ngoại tuyến", friendRequests: "Lời mời kết bạn", searchFriend: "Nhập email tìm bạn...", searchBtn: "Tìm", friends: "BẠN BÈ", pending: "CHỜ XÁC NHẬN", sent: "ĐÃ GỬI", emptyList: "Danh sách trống.", editProfile: "Chỉnh sửa hồ sơ", language: "Ngôn ngữ", darkMode: "Chế độ tối", vietnamese: "Tiếng Việt", english: "English", forgotPassword: "Quên mật khẩu", sendOtp: "Gửi mã OTP", resetPassword: "Đặt lại mật khẩu", otpCode: "Mã OTP", newPassword: "Mật khẩu mới", confirmNewPassword: "Xác nhận mật khẩu mới" },
+    en: { chat: "Messages", contact: "Contacts", settings: "Settings", lang: "Language: English", theme: "Theme: Dark", save: "Save Profile", logout: "Logout", email: "Email", password: "Password", forgotPass: "Forgot Password?", login: "Login", noAccount: "Don't have an account?", register: "Register now", search: "Search...", addFriend: "Add Friend", online: "Online", offline: "Offline", friendRequests: "Friend Requests", searchFriend: "Enter email to search...", searchBtn: "Search", friends: "FRIENDS", pending: "PENDING", sent: "SENT", emptyList: "List is empty.", editProfile: "Edit Profile", language: "Language", darkMode: "Dark Mode", vietnamese: "Tiếng Việt", english: "English", forgotPassword: "Forgot Password", sendOtp: "Send OTP", resetPassword: "Reset Password", otpCode: "OTP Code", newPassword: "New Password", confirmNewPassword: "Confirm New Password" }
 };
 
 // Cấu hình máy chủ trung gian STUN
@@ -31,17 +30,24 @@ export const AppProvider = ({ children }: any) => {
     // ==========================================
     // STATE QUẢN LÝ WEBRTC (CUỘC GỌI)
     // ==========================================
-    const [callState, setCallState] = useState<any>(null); 
+    const [callState, setCallState] = useState<any>(null);
     const [callDuration, setCallDuration] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
+
+    const setCallStateTracked = (val: any) => {
+        const resolved = typeof val === 'function' ? val(callStateRef.current) : val;
+        callStateRef.current = resolved;
+        setCallState(resolved);
+    };
     
     // Luồng dữ liệu thực tế
     const [localStream, setLocalStream] = useState<any>(null);
     const [remoteStream, setRemoteStream] = useState<any>(null);
     
-    const pcRef = useRef<any>(null); // Tạm đổi thành any để không bị lỗi type
+    const pcRef = useRef<any>(null);
     const timerRef = useRef<any>(null);
+    const callStateRef = useRef<any>(null);
 
     useEffect(() => {
         const initGlobal = async () => {
@@ -56,7 +62,7 @@ export const AppProvider = ({ children }: any) => {
                 setUser(currUser);
 
                 // THAY ĐỊA CHỈ IP WIFI CỦA BẠN VÀO ĐÂY
-                socketRef.current = io('http://10.17.87.137:5000', { transports: ['websocket'], reconnectionAttempts: 5 });
+                socketRef.current = io('http://10.71.29.137:5000', { transports: ['websocket'], reconnectionAttempts: 5 });
 
                 socketRef.current.on('connect', () => {
                     socketRef.current?.emit('register_user', currUser.id);
@@ -71,14 +77,14 @@ export const AppProvider = ({ children }: any) => {
                 // 1. NHẬN CUỘC GỌI TỚI
                 // ----------------------------------------
                 socketRef.current.on('incoming_call', ({ caller, isVideo }) => {
-                    setCallState({ status: 'ringing', partner: caller, isVideo, isCaller: false });
+                    setCallStateTracked({ status: 'ringing', partner: caller, isVideo, isCaller: false });
                 });
 
                 // ----------------------------------------
                 // 2. NGƯỜI KIA ĐÃ BẮT MÁY -> TẠO OFFER KẾT NỐI
                 // ----------------------------------------
                 socketRef.current.on('call_accepted', async () => {
-                    setCallState((prev: any) => ({ ...prev, status: 'incall', startTime: Date.now() }));
+                    setCallStateTracked((prev: any) => ({ ...prev, status: 'incall', startTime: Date.now() }));
                     startTimer();
                     await createOffer();
                 });
@@ -86,25 +92,21 @@ export const AppProvider = ({ children }: any) => {
                 // ----------------------------------------
                 // 3. XỬ LÝ TÍN HIỆU WEBRTC (OFFER, ANSWER, ICE)
                 // ----------------------------------------
-                socketRef.current.on('webrtc_signal', async (signal) => {
+                socketRef.current.on('webrtc_signal', async (signal: any) => {
                     if (!pcRef.current) return;
-                    
-                    // Code WebRTC gốc (tạm giữ cấu trúc, không chạy vì pcRef = null trên Web)
-                    /*
                     if (signal.type === 'offer') {
                         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                         const answer = await pcRef.current.createAnswer();
                         await pcRef.current.setLocalDescription(answer);
-                        socketRef.current?.emit('webrtc_signal', { targetId: callState?.partner.id, signal: answer });
+                        socketRef.current?.emit('webrtc_signal', { targetId: callStateRef.current?.partner?.id, signal: answer });
                     } else if (signal.type === 'answer') {
                         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                     } else if (signal.candidate) {
-                        await pcRef.current.addIceCandidate(new RTCIceCandidate(signal));
+                        await pcRef.current.addIceCandidate(new RTCIceCandidate(signal.candidate));
                     }
-                    */
                 });
 
-                socketRef.current.on('call_status', ({ status }) => {
+                socketRef.current.on('call_status', ({ status }: any) => {
                     if (status === 'failed' || status === 'busy' || status === 'rejected') {
                         cleanupCall();
                     }
@@ -115,7 +117,7 @@ export const AppProvider = ({ children }: any) => {
         };
         initGlobal();
         return () => { socketRef.current?.disconnect(); cleanupCall(); };
-    }, [callState]);
+    }, []);
 
     const startTimer = () => { setCallDuration(0); timerRef.current = setInterval(() => setCallDuration(prev => prev + 1), 1000); };
     const stopTimer = () => { if (timerRef.current) clearInterval(timerRef.current); setCallDuration(0); };
@@ -124,31 +126,56 @@ export const AppProvider = ({ children }: any) => {
     // KHỞI TẠO WEBRTC VÀ XIN QUYỀN THIẾT BỊ
     // ==========================================
     const setupWebrtc = async (isVideoCall: boolean) => {
-        console.log("WebRTC is disabled. Code safely running on Web.");
+        try {
+            const stream = await mediaDevices.getUserMedia({
+                audio: true,
+                video: isVideoCall ? { facingMode: 'user' } : false,
+            });
+            setLocalStream(stream);
+
+            const pc = new RTCPeerConnection(peerConstraints);
+            pcRef.current = pc;
+
+            stream.getTracks().forEach((track: any) => pc.addTrack(track, stream));
+
+            pc.ontrack = (event: any) => {
+                if (event.streams && event.streams[0]) {
+                    setRemoteStream(event.streams[0]);
+                }
+            };
+
+            pc.onicecandidate = (event: any) => {
+                if (event.candidate) {
+                    socketRef.current?.emit('webrtc_signal', {
+                        targetId: callStateRef.current?.partner?.id,
+                        signal: { candidate: event.candidate },
+                    });
+                }
+            };
+        } catch (e) {
+            console.warn('setupWebrtc error:', e);
+        }
     };
 
     // Tạo lời mời (Offer) gửi cho người nghe
     const createOffer = async () => {
         if (!pcRef.current) return;
-        // const offer = await pcRef.current.createOffer();
-        // await pcRef.current.setLocalDescription(offer);
-        // socketRef.current?.emit('webrtc_signal', { targetId: callState.partner.id, signal: offer });
+        const offer = await pcRef.current.createOffer();
+        await pcRef.current.setLocalDescription(offer);
+        socketRef.current?.emit('webrtc_signal', { targetId: callStateRef.current?.partner?.id, signal: offer });
     };
 
-    // ==========================================
-    // CÁC HÀM NÚT BẤM GỌI/NGHE/TẮT
-    // ==========================================
     const startCall = async (receiverId: string, receiverName: string, isVideo: boolean) => {
-        setCallState({ status: 'calling', partner: { id: receiverId, fullName: receiverName }, isVideo, isCaller: true });
-        await setupWebrtc(isVideo); // Bật Cam/Mic của mình trước
+        setCallStateTracked({ status: 'calling', partner: { id: receiverId, fullName: receiverName }, isVideo, isCaller: true });
+        await setupWebrtc(isVideo);
         socketRef.current?.emit('request_call', { caller: user, receiverId, isVideo });
     };
 
     const acceptCall = async () => {
-        socketRef.current?.emit('accept_call', { callerId: callState.partner.id, receiverId: user.id });
-        setCallState((prev: any) => ({ ...prev, status: 'incall', startTime: Date.now() }));
+        socketRef.current?.emit('accept_call', { callerId: callStateRef.current.partner.id, receiverId: user.id });
+        setCallStateTracked((prev: any) => ({ ...prev, status: 'incall', startTime: Date.now() }));
         startTimer();
-        await setupWebrtc(callState.isVideo); // Bật Cam/Mic khi nhấc máy
+        await setupWebrtc(callStateRef.current.isVideo);
     };
 
     const cleanupCall = () => {
@@ -161,28 +188,30 @@ export const AppProvider = ({ children }: any) => {
             pcRef.current = null;
         }
         setRemoteStream(null);
-        setCallState(null);
+        setCallStateTracked(null);
         stopTimer();
         setIsMuted(false);
         setIsVideoOff(false);
     };
 
     const endCall = () => {
-        const duration = callState.startTime ? Math.floor((Date.now() - callState.startTime) / 1000) : 0;
-        const roomId = `1-1_${[user.id, callState.partner.id].sort().join('_')}`;
-        
+        const cs = callStateRef.current;
+        if (!cs) return;
+        const duration = cs.startTime ? Math.floor((Date.now() - cs.startTime) / 1000) : 0;
+        const roomId = `1-1_${[user.id, cs.partner.id].sort().join('_')}`;
+
         socketRef.current?.emit('end_call', {
-            callerId: callState.isCaller ? user.id : callState.partner.id,
-            receiverId: callState.isCaller ? callState.partner.id : user.id,
+            callerId: cs.isCaller ? user.id : cs.partner.id,
+            receiverId: cs.isCaller ? cs.partner.id : user.id,
             callData: {
-                callerId: callState.isCaller ? user.id : callState.partner.id,
-                receiverId: callState.isCaller ? callState.partner.id : user.id,
-                startTime: new Date(callState.startTime || Date.now()).toISOString(),
-                duration, status: callState.startTime ? 'completed' : 'missed'
+                callerId: cs.isCaller ? user.id : cs.partner.id,
+                receiverId: cs.isCaller ? cs.partner.id : user.id,
+                startTime: new Date(cs.startTime || Date.now()).toISOString(),
+                duration, status: cs.startTime ? 'completed' : 'missed'
             }
         });
 
-        socketRef.current?.emit('send_message', { roomId, senderId: user.id, senderName: user.fullName, text: `Cuộc gọi ${callState.isVideo ? 'Video' : 'Thoại'} ${callState.startTime ? `(${formatTime(duration)})` : 'Nhỡ'}`, messageType: 'call' });
+        socketRef.current?.emit('send_message', { roomId, senderId: user.id, senderName: user.fullName, text: `Cuộc gọi ${cs.isVideo ? 'Video' : 'Thoại'} ${cs.startTime ? `(${formatTime(duration)})` : 'Nhỡ'}`, messageType: 'call' });
         cleanupCall();
     };
 
@@ -215,11 +244,11 @@ export const AppProvider = ({ children }: any) => {
                         
                         {/* HIỂN THỊ ĐỐI PHƯƠNG */}
                         {callState.isVideo && remoteStream ? (
-                            <View style={styles.remoteVideo}>
-                                <Text style={{color: 'white', marginTop: 100, textAlign: 'center', fontSize: 18}}>
-                                    Đang gọi (Tạm ẩn Video)...
-                                </Text>
-                            </View>
+                            <RTCView
+                                streamURL={remoteStream.toURL()}
+                                style={styles.remoteVideo}
+                                objectFit="cover"
+                            />
                         ) : (
                             <View style={styles.avatarWrap}>
                                 {callState.status !== 'incall' && <View style={styles.pulseCircle} />}
@@ -229,9 +258,14 @@ export const AppProvider = ({ children }: any) => {
                             </View>
                         )}
 
-                        {/* HIỂN THỊ CAMERA CỦA MÌNH (TẠM ẨN) */}
+                        {/* CAMERA CỦA MÌNH (góc nhỏ) */}
                         {callState.isVideo && localStream && (
-                            <View style={styles.localVideo}></View>
+                            <RTCView
+                                streamURL={localStream.toURL()}
+                                style={styles.localVideo}
+                                objectFit="cover"
+                                mirror
+                            />
                         )}
 
                         {/* OVERLAY THÔNG TIN TRÊN CÙNG */}

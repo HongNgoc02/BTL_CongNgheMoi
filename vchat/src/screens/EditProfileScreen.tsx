@@ -267,8 +267,21 @@ const EditProfileScreen = ({ navigation }: any) => {
         } finally { setLoading(false); }
     };
 
-    const handleDeleteAccount = () => {
-        Alert.alert("Xóa tài khoản", "Tính năng đang được cập nhật.");
+    const handleDeleteAccount = async () => {
+        if (!deletePass) return Alert.alert("Lỗi", "Vui lòng nhập mật khẩu xác nhận!");
+        Alert.alert("Xác nhận xóa tài khoản", "Hành động này không thể hoàn tác. Tiếp tục?", [
+            { text: "Hủy", style: "cancel" },
+            { text: "Xóa", style: "destructive", onPress: async () => {
+                setLoading(true);
+                try {
+                    await api.post('/users/delete', { userId: user.id, password: deletePass });
+                    await AsyncStorage.clear();
+                    navigation.replace('Login');
+                } catch (error: any) {
+                    Alert.alert("Lỗi", error.response?.data?.error || "Mật khẩu không đúng!");
+                } finally { setLoading(false); }
+            }}
+        ]);
     };
 
     return (

@@ -1986,15 +1986,15 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onClose, isAlert, the
 // =================================================================
 // COMPONENT TRÌNH PHÁT GHI ÂM TẠI CHỖ
 // =================================================================
-const InlineAudioPlayer = ({ uri, isMine }) => {
+const InlineAudioPlayer = ({ uri }) => {
     const [soundActive, setSoundActive] = useState(false);
     return (
         <div className="flex items-center gap-2 py-1">
-            <audio 
-                src={uri} 
-                controls 
-                className="max-w-[200px] h-8 outline-none" 
-                onPlay={() => setSoundActive(true)} 
+            <audio
+                src={uri}
+                controls
+                className="max-w-[200px] h-8 outline-none"
+                onPlay={() => setSoundActive(true)}
                 onPause={() => setSoundActive(false)}
             />
         </div>
@@ -2204,13 +2204,13 @@ const Chat = () => {
 
     const [activeGroupCalls, setActiveGroupCalls] = useState([]);
 
-    const [callState, setCallState] = useState('idle'); 
-    const [callDetail, setCallDetail] = useState(null); 
+    const [callState, setCallState] = useState('idle');
+    const [callDetail, setCallDetail] = useState(null);
     const [callDuration, setCallDuration] = useState(0);
     const [isMicOn, setIsMicOn] = useState(true);
     const [isCamOn, setIsCamOn] = useState(true);
     const [remoteCamOn, setRemoteCamOn] = useState(true);
-    const [remoteMicOn, setRemoteMicOn] = useState(true); 
+    const [remoteMicOn, setRemoteMicOn] = useState(true);
 
     const peerConnectionRef = useRef(null);
     const groupPeersRef = useRef({});       
@@ -2229,6 +2229,7 @@ const Chat = () => {
     const recordingTimerRef = useRef(null);
 
     const closeConfirm = () => setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+
 
     useEffect(() => {
         return () => {
@@ -3609,7 +3610,7 @@ const Chat = () => {
                                     const content = () => {
                                         if (type === 'image') return <img src={msg.text} alt="Ảnh" className="min-w-[200px] max-w-[350px] w-auto h-auto rounded-lg cursor-pointer hover:opacity-90 shadow-sm" onClick={() => window.open(msg.text, '_blank')} />;
                                         if (type === 'video') return <video src={msg.text} controls className="max-w-[280px] rounded-lg outline-none" />;
-                                        if (type === 'audio') return <InlineAudioPlayer uri={msg.text} isMine={isMine} />;
+                                        if (type === 'audio') return <InlineAudioPlayer uri={msg.text} />;
                                         if (type === 'file') return ( <div className="flex items-center gap-3 bg-black/10 p-3 rounded-lg min-w-[220px]"> <FileText size={32} className={isMine ? "text-white" : "text-blue-500"} /> <div className="flex flex-col flex-1 overflow-hidden"> <span className="font-bold text-sm truncate max-w-[180px]" title={msg.fileName}>{msg.fileName || "Tài liệu đính kèm"}</span> <a href={msg.text} target="_blank" rel="noreferrer" className={`text-xs mt-1 hover:underline flex items-center gap-1 ${isMine ? 'text-blue-100' : 'text-blue-600'}`}><Download size={12}/> Tải xuống</a> </div> </div> );
                                         return <span>{msg.text}</span>;
                                     };

@@ -9,7 +9,7 @@ import { useApp } from './AppContext';
 
 const SettingsScreen = ({ navigation }: any) => {
     // Lấy trạng thái Sáng/Tối và Ngôn ngữ từ Global
-    const { isDark, toggleTheme, lang, changeLanguage } = useApp();
+    const { isDark, toggleTheme, lang, changeLanguage, t } = useApp();
 
     const handleLogout = async () => {
         await AsyncStorage.clear();
@@ -20,7 +20,7 @@ const SettingsScreen = ({ navigation }: any) => {
         <SafeAreaView style={[styles.container, isDark && { backgroundColor: '#121212' }]} edges={['top']}>
             {/* HEADER */}
             <View style={[styles.header, isDark && { backgroundColor: '#1e1e1e', borderBottomColor: '#333' }]}>
-                <Text style={[styles.headerTitle, isDark && { color: '#fff' }]}>Cài đặt</Text>
+                <Text style={[styles.headerTitle, isDark && { color: '#fff' }]}>{t('settings')}</Text>
             </View>
 
             {/* NỘI DUNG CHÍNH */}
@@ -30,21 +30,21 @@ const SettingsScreen = ({ navigation }: any) => {
                     {/* Mục Chỉnh sửa hồ sơ */}
                     <TouchableOpacity style={[styles.row, isDark && { borderBottomColor: '#333' }]} onPress={() => navigation.navigate('EditProfile')}>
                         <View style={[styles.iconWrap, { backgroundColor: '#e3f2fd' }]}><User size={20} color="#0068ff" /></View>
-                        <Text style={[styles.rowTxt, isDark && { color: '#fff' }]}>Chỉnh sửa hồ sơ</Text>
+                        <Text style={[styles.rowTxt, isDark && { color: '#fff' }]}>{t('editProfile')}</Text>
                         <ChevronRight size={20} color="#ccc" />
                     </TouchableOpacity>
 
                     {/* Mục Đổi Ngôn ngữ */}
                     <TouchableOpacity style={[styles.row, isDark && { borderBottomColor: '#333' }]} onPress={() => changeLanguage(lang === 'vi' ? 'en' : 'vi')}>
                         <View style={[styles.iconWrap, { backgroundColor: '#f3e5f5' }]}><Globe size={20} color="#9c27b0" /></View>
-                        <View style={{ flex: 1 }}><Text style={[styles.rowTxt, isDark && { color: '#fff' }]}>Ngôn ngữ</Text></View>
-                        <Text style={styles.valTxt}>{lang === 'vi' ? 'Tiếng Việt' : 'English'}</Text>
+                        <View style={{ flex: 1 }}><Text style={[styles.rowTxt, isDark && { color: '#fff' }]}>{t('language')}</Text></View>
+                        <Text style={styles.valTxt}>{lang === 'vi' ? t('vietnamese') : t('english')}</Text>
                     </TouchableOpacity>
 
                     {/* Mục Chế độ tối (Dark Mode) */}
                     <View style={styles.row}>
                         <View style={[styles.iconWrap, { backgroundColor: '#fff3e0' }]}><Moon size={20} color="#ff9800" /></View>
-                        <Text style={[styles.rowTxt, isDark && { color: '#fff' }]}>Chế độ tối</Text>
+                        <Text style={[styles.rowTxt, isDark && { color: '#fff' }]}>{t('darkMode')}</Text>
                         <Switch 
                             value={isDark} 
                             onValueChange={toggleTheme} 
@@ -57,7 +57,7 @@ const SettingsScreen = ({ navigation }: any) => {
                 {/* Nút Đăng xuất */}
                 <TouchableOpacity style={[styles.logoutBtn, isDark && { backgroundColor: '#1e1e1e' }]} onPress={handleLogout}>
                     <LogOut size={20} color="#ff3b30" />
-                    <Text style={styles.logoutTxt}>Đăng xuất</Text>
+                    <Text style={styles.logoutTxt}>{t('logout')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -65,18 +65,18 @@ const SettingsScreen = ({ navigation }: any) => {
             <View style={[styles.footer, isDark && { backgroundColor: '#1e1e1e', borderTopColor: '#333' }]}>
                 <TouchableOpacity style={styles.tab} onPress={() => navigation.navigate('Home')}>
                     <MessageSquare size={24} color="#888" />
-                    <Text style={{color:'#888', fontSize:11, marginTop: 4}}>Tin nhắn</Text>
+                    <Text style={{color:'#888', fontSize:11, marginTop: 4}}>{t('chat')}</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity style={styles.tab} onPress={() => navigation.navigate('Contact')}>
                     <Users size={24} color="#888" />
-                    <Text style={{color:'#888', fontSize:11, marginTop: 4}}>Danh bạ</Text>
+                    <Text style={{color:'#888', fontSize:11, marginTop: 4}}>{t('contact')}</Text>
                 </TouchableOpacity>
 
                 {/* Tab Cài đặt đang Active nên có màu xanh */}
                 <TouchableOpacity style={styles.tab}>
                     <Settings size={24} color="#0068ff" />
-                    <Text style={{color:'#0068ff', fontSize:11, marginTop: 4}}>Cài đặt</Text>
+                    <Text style={{color:'#0068ff', fontSize:11, marginTop: 4}}>{t('settings')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

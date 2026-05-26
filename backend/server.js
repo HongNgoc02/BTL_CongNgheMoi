@@ -700,6 +700,7 @@ app.use(express.json());
 const client = new DynamoDBClient({ region: process.env.AWS_REGION || "us-east-1" });
 const docClient = DynamoDBDocumentClient.from(client);
 const server = http.createServer(app);
+
 const io = new Server(server, { cors: { origin: '*' } });
 
 const transporter = nodemailer.createTransport({
@@ -817,6 +818,20 @@ app.post('/api/users/change-password', async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await docClient.send(new UpdateCommand({ TableName: "Users", Key: { "id": userId }, UpdateExpression: "set password = :p", ExpressionAttributeValues: { ":p": hashedPassword } }));
         res.status(200).json({ message: "Đổi mật khẩu thành công!" });
+    } catch (error) { res.status(500).json({ error: "Lỗi Server" }); }
+});
+
+app.post('/api/users/delete', async (req, res) => {
+    const { userId, password } = req.body;
+    if (!userId || !password) return res.status(400).json({ error: "Thiếu thông tin!" });
+    try {
+        const result = await docClient.send(new ScanCommand({ TableName: "Users", FilterExpression: "id = :id", ExpressionAttributeValues: { ":id": userId } }));
+        const user = result.Items?.[0];
+        if (!user) return res.status(404).json({ error: "Không tìm thấy tài khoản!" });
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.status(400).json({ error: "Mật khẩu không đúng!" });
+        await docClient.send(new DeleteCommand({ TableName: "Users", Key: { id: userId } }));
+        res.json({ message: "Tài khoản đã được xóa thành công." });
     } catch (error) { res.status(500).json({ error: "Lỗi Server" }); }
 });
 
@@ -1315,9 +1330,6 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
         res.status(200).json({ url: fileUrl, type: finalType, name: req.file.originalname });
     } catch (error) { res.status(500).json({ error: "Lỗi upload file" }); }
 });
-// =================================================================
-// 9. API THẢ CẢM XÚC & GHIM TIN NHẮN
-// =================================================================
 
 // 1. API Thả cảm xúc
 app.post('/api/messages/react', async (req, res) => {
