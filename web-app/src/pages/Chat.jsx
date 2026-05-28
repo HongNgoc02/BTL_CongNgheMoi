@@ -1933,7 +1933,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 
-const socket = io('http://localhost:5000'); 
+const socket = io('http://44.200.231.22:5000'); 
 const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
 // =================================================================
