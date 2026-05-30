@@ -1933,8 +1933,14 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 
-const socket = io('http://44.200.231.22:5000'); 
-const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+const socket = io(import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api','') : 'https://zinc-buf-aerospace-jam.trycloudflare.com');
+const rtcConfig = { iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:openrelay.metered.ca:80' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+] };
 
 // =================================================================
 // 0. TIỆN ÍCH CHUNG
@@ -2881,15 +2887,22 @@ const Chat = () => {
             setConfirmDialog({ isOpen: true, isAlert: true, title: "Đã đạt giới hạn", message: "Chỉ được ghim tối đa 3 cuộc trò chuyện.", onConfirm: closeConfirm, theme, bgPanel });
             return;
         }
+        // Toggle ngay (optimistic) để luôn dùng được, kể cả khi backend chưa hỗ trợ
+        const updated = pinnedConversations.includes(convId)
+            ? pinnedConversations.filter(id => id !== convId)
+            : [...pinnedConversations, convId];
+        setPinnedConversations(updated);
+        localStorage.setItem('pinnedConversations', JSON.stringify(updated));
+        // Cố gắng đồng bộ lên server để app cũng thấy; lỗi thì vẫn giữ ghim cục bộ
         try {
             const res = await api.post('/users/pin-conversation', { userId: user.id, roomId: convId });
-            const updated = res.data.pinnedConvs;
-            setPinnedConversations(updated);
-            localStorage.setItem('pinnedConversations', JSON.stringify(updated));
-            // Đồng bộ vào user đã lưu để lần mở sau vẫn đúng
-            try { localStorage.setItem('user', JSON.stringify({ ...user, pinnedConvs: updated })); } catch { /* ignore */ }
+            if (Array.isArray(res.data?.pinnedConvs)) {
+                setPinnedConversations(res.data.pinnedConvs);
+                localStorage.setItem('pinnedConversations', JSON.stringify(res.data.pinnedConvs));
+                try { localStorage.setItem('user', JSON.stringify({ ...user, pinnedConvs: res.data.pinnedConvs })); } catch { /* ignore */ }
+            }
         } catch (err) {
-            setConfirmDialog({ isOpen: true, isAlert: true, title: "Lỗi", message: err.response?.data?.error || "Không thể ghim. Thử lại sau.", onConfirm: closeConfirm, theme, bgPanel });
+            // Backend chưa có endpoint hoặc lỗi mạng -> giữ ghim cục bộ, không báo lỗi
         }
     };
 

@@ -14,7 +14,7 @@ const HomeScreen = ({ navigation }: any) => {
     const [search, setSearch] = useState("");
     const [showMenu, setShowMenu] = useState(false);
     const [hiddenConvs, setHiddenConvs] = useState<string[]>([]);
-    const pinnedConvs: string[] = Array.isArray(user?.pinnedConvs) ? user.pinnedConvs : [];
+    const [pinnedConvs, setPinnedConvs] = useState<string[]>([]);
 
     // MODAL STATE
     const [profileModalVisible, setProfileModalVisible] = useState(false);
@@ -35,6 +35,12 @@ const HomeScreen = ({ navigation }: any) => {
     const loadLocalPrefs = async () => {
         try {
             const h = await AsyncStorage.getItem('hiddenConvs'); if (h) setHiddenConvs(JSON.parse(h));
+            // Ưu tiên ghim từ server (user.pinnedConvs); nếu chưa có thì lấy từ máy
+            if (Array.isArray(user?.pinnedConvs)) {
+                setPinnedConvs(user.pinnedConvs);
+            } else {
+                const p = await AsyncStorage.getItem('pinnedConvs'); if (p) setPinnedConvs(JSON.parse(p));
+            }
         } catch {}
     };
 
@@ -93,11 +99,22 @@ const HomeScreen = ({ navigation }: any) => {
             return;
         }
         setOptionModalVisible(false);
+        // Toggle ngay trên máy (optimistic) để luôn dùng được, kể cả khi backend chưa hỗ trợ
+        const updated = pinnedConvs.includes(roomId)
+            ? pinnedConvs.filter(id => id !== roomId)
+            : [...pinnedConvs, roomId];
+        setPinnedConvs(updated);
+        AsyncStorage.setItem('pinnedConvs', JSON.stringify(updated)).catch(() => {});
+        // Cố gắng đồng bộ lên server để web cũng thấy; lỗi thì vẫn giữ ghim cục bộ
         try {
             const res = await api.post('/users/pin-conversation', { userId: user.id, roomId });
-            await updateUser({ pinnedConvs: res.data.pinnedConvs });
-        } catch (e: any) {
-            Alert.alert("Lỗi", e.response?.data?.error || "Không thể ghim. Thử lại sau.");
+            if (Array.isArray(res.data?.pinnedConvs)) {
+                setPinnedConvs(res.data.pinnedConvs);
+                AsyncStorage.setItem('pinnedConvs', JSON.stringify(res.data.pinnedConvs)).catch(() => {});
+                await updateUser({ pinnedConvs: res.data.pinnedConvs });
+            }
+        } catch (e) {
+            // Backend chưa có endpoint hoặc mất mạng -> bỏ qua, ghim cục bộ vẫn hiệu lực
         }
     };
 

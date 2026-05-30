@@ -2,9 +2,11 @@ import axios from "axios";
 // Import bộ nhớ dành riêng cho Mobile
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// ⚠️ Địa chỉ backend (HTTPS qua Cloudflare Tunnel). Nếu chạy lại tunnel sẽ ra URL mới -> đổi ở ĐÂY.
+export const SERVER_URL = "https://zinc-buf-aerospace-jam.trycloudflare.com";
+
 const api = axios.create({
-  // Tạm thời fix cứng link trực tiếp để test, giữ nguyên :5000
-  baseURL: "http://44.200.231.22:5000/api",
+  baseURL: `${SERVER_URL}/api`,
 });
 
 // Thêm async vì AsyncStorage trên điện thoại cần thời gian chờ (await)

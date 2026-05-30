@@ -246,7 +246,7 @@ const ChatDetail = ({ route, navigation }: any) => {
     const { roomId, roomName } = route.params;
     const roomType = roomId.includes('GROUP_') ? 'group' : '1-1'; 
 
-    const { isDark, user, socket, onlineUsers, startCall } = useApp();
+    const { isDark, user, socket, onlineUsers, startCall, startGroupCall } = useApp();
     const partnerId = roomId.split('_').find((id: string) => id !== user?.id && id !== '1-1');
     const isActuallyOnline = onlineUsers.includes(partnerId);
 
@@ -304,6 +304,8 @@ const ChatDetail = ({ route, navigation }: any) => {
             socket.on('message_recalled', (messageId: string) => setMessages(prev => prev.map(m => m.id === messageId ? { ...m, isRecalled: true } : m)));
             socket.on('messages_seen', () => setMessages(prev => prev.map(m => m.authorId === user.id ? { ...m, status: 'seen' } : m)));
             socket.on('message_reacted', ({ messageId, reactions }: any) => setMessages(prev => prev.map(m => m.id === messageId ? { ...m, reactions } : m)));
+            // Đối phương ghim/bỏ ghim tin nhắn -> cập nhật banner cho cả 2 bên
+            socket.on('message_pinned', ({ pinnedMessage }: any) => setPinnedMsg(pinnedMessage));
 
             try {
                 const res = await api.get(`/messages/${roomId}`);
@@ -312,13 +314,20 @@ const ChatDetail = ({ route, navigation }: any) => {
             } catch (e) {
                 console.log("Lỗi tải tin nhắn:", e);
             } finally { setLoading(false); }
+
+            // Nạp tin nhắn đã ghim sẵn (nếu có) để hiện banner ngay khi mở phòng
+            try {
+                const convRes = await api.get(`/conversations/user/${user.id}`);
+                const thisRoom = convRes.data?.find((c: any) => c.id === roomId);
+                if (thisRoom?.pinnedMessage) setPinnedMsg(thisRoom.pinnedMessage);
+            } catch (e) { /* không sao, bỏ qua */ }
         };
         initChat();
 
         return () => {
             if (socket) {
                 socket.off('receive_message');
-                socket.off('user_typing'); socket.off('message_recalled'); socket.off('messages_seen'); socket.off('message_reacted');
+                socket.off('user_typing'); socket.off('message_recalled'); socket.off('messages_seen'); socket.off('message_reacted'); socket.off('message_pinned');
                 socket.emit('typing', { roomId, userName: user?.fullName, isTyping: false });
             }
             if (recordTimerRef.current) clearInterval(recordTimerRef.current);
@@ -457,7 +466,14 @@ const ChatDetail = ({ route, navigation }: any) => {
             if (action === 'reply') {
                 setReplyingTo(selectedMsg);
             } else if (action === 'pin') {
-                setPinnedMsg(pinnedMsg?.id === selectedMsg?.id ? null : selectedMsg);
+                const isUnpin = pinnedMsg?.id === selectedMsg?.id;
+                // Cập nhật ngay trên máy (optimistic)
+                setPinnedMsg(isUnpin ? null : selectedMsg);
+                // Đồng bộ lên server để đối phương cũng thấy ghim
+                api.post('/conversations/pin', isUnpin
+                    ? { roomId, messageId: null }
+                    : { roomId, messageId: selectedMsg.id, messageText: selectedMsg.messageType === 'text' ? selectedMsg.text : '[Tệp đính kèm]', authorName: selectedMsg.authorName }
+                ).catch((e: any) => console.log("Lỗi ghim tin nhắn:", e));
             } else if (action === 'forward') {
                 openForwardModal();
             } else if (action === 'recall') {
@@ -549,13 +565,15 @@ const ChatDetail = ({ route, navigation }: any) => {
                     {roomType === '1-1' && <Text style={[styles.headerStatus, !isActuallyOnline && { color: '#888' }]}>{isActuallyOnline ? 'Đang trực tuyến' : 'Ngoại tuyến'}</Text>}
                 </View>
                 <View style={styles.headerActions}>
-                    <TouchableOpacity style={styles.headBtn} onPress={() => startCall(partnerId, roomName, false)}>
-                        <Phone size={22} color="#0068ff" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.headBtn} onPress={() => startCall(partnerId, roomName, true)}>
+                    {roomType === '1-1' && (
+                        <TouchableOpacity style={styles.headBtn} onPress={() => startCall(partnerId, roomName, false)}>
+                            <Phone size={22} color="#0068ff" />
+                        </TouchableOpacity>
+                    )}
+                    <TouchableOpacity style={styles.headBtn} onPress={() => roomType === 'group' ? startGroupCall(roomId, roomName) : startCall(partnerId, roomName, true)}>
                         <VideoIcon size={22} color="#0068ff" />
                     </TouchableOpacity>
-                    
+
                     {roomType === '1-1' && (
                         <TouchableOpacity style={styles.headBtn} onPress={fetchPartnerInfo}>
                             <Info size={24} color="#0068ff" />
