@@ -87,6 +87,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import api from '../services/api';
 
+
 // IMPORT USEAPP ĐỂ LẤY THEME VÀ NGÔN NGỮ
 import { useApp } from './AppContext'; 
 
@@ -103,11 +104,13 @@ const LoginScreen = ({ navigation }: any) => {
         if (!email || !password) return Alert.alert("Thông báo", "Vui lòng nhập đủ thông tin");
         setLoading(true);
         try {
-            const res = await api.post('/auth/login', { email, password });
+            const res = await api.post('/auth/login', { email: email.trim().toLowerCase(), 
+    password: password.trim() });
             await AsyncStorage.setItem('user', JSON.stringify(res.data.user));
             navigation.replace('Home');
         } catch (error: any) {
-            Alert.alert("Lỗi", error.response?.data?.error || "Sai email hoặc mật khẩu!");
+            const serverMessage = error.response?.data || error.message;
+            Alert.alert("Lỗi thật sự từ Server:", JSON.stringify(serverMessage));
         } finally { setLoading(false); }
     };
 

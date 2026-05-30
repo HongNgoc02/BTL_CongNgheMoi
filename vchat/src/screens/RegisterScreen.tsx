@@ -53,8 +53,8 @@ const RegisterScreen = ({ navigation }: any) => {
         try {
             await api.post('/auth/register', { 
                 fullName: name, 
-                email: email, 
-                password: password,
+                email: email.trim().toLowerCase(),
+                password: password.trim(),
                 dob: dob,
                 gender: gender
             });

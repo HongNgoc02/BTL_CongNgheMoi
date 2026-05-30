@@ -15,7 +15,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
         if (!email) return Alert.alert("Thông báo", "Vui lòng nhập Email!");
         setLoading(true);
         try {
-            await api.post('/auth/forgot-password', { email });
+            await api.post('/auth/forgot-password', { email: email.trim().toLowerCase() });
             Alert.alert("Thành công", "Mã OTP khôi phục đã được gửi vào Email của bạn.");
             setStep(2);
         } catch (error: any) {
@@ -27,7 +27,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
         if (!otp || !newPassword) return Alert.alert("Thông báo", "Vui lòng điền đủ mã OTP và mật khẩu mới!");
         setLoading(true);
         try {
-            await api.post('/auth/reset-password', { email, otp, newPassword });
+            await api.post('/auth/reset-password', { email: email.trim().toLowerCase(), otp: otp.trim(), newPassword: newPassword.trim() });
             Alert.alert("Thành công", "Mật khẩu đã được thay đổi. Hãy đăng nhập lại.");
             navigation.navigate('Login');
         } catch (error: any) {

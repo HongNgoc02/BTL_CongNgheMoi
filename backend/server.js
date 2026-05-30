@@ -843,6 +843,33 @@ app.put('/api/users/update', async (req, res) => {
     } catch (error) { res.status(500).json({ error: "Lỗi cập nhật" }); }
 });
 
+// Ghim/Bỏ ghim cuộc trò chuyện - đồng bộ giữa web & app (lưu theo user)
+app.post('/api/users/pin-conversation', async (req, res) => {
+    const { userId, roomId } = req.body;
+    if (!userId || !roomId) return res.status(400).json({ error: "Thiếu userId hoặc roomId" });
+    try {
+        const result = await docClient.send(new GetCommand({ TableName: "Users", Key: { id: userId } }));
+        const user = result.Item;
+        if (!user) return res.status(404).json({ error: "Không tìm thấy người dùng" });
+
+        const current = Array.isArray(user.pinnedConvs) ? user.pinnedConvs : [];
+        let pinnedConvs;
+        if (current.includes(roomId)) {
+            pinnedConvs = current.filter((id) => id !== roomId);
+        } else {
+            if (current.length >= 3) return res.status(400).json({ error: "Chỉ được ghim tối đa 3 cuộc trò chuyện." });
+            pinnedConvs = [...current, roomId];
+        }
+
+        await docClient.send(new UpdateCommand({
+            TableName: "Users", Key: { id: userId },
+            UpdateExpression: "set pinnedConvs = :p",
+            ExpressionAttributeValues: { ":p": pinnedConvs }
+        }));
+        res.json({ pinnedConvs });
+    } catch (error) { console.error("Lỗi ghim:", error); res.status(500).json({ error: "Lỗi server" }); }
+});
+
 // =================================================================
 // 4. QUẢN LÝ NHÓM & LẤY TIN NHẮN
 // =================================================================

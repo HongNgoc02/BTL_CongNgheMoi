@@ -2187,7 +2187,12 @@ const Chat = () => {
         try { return JSON.parse(localStorage.getItem('clearedConversations') || '{}'); } catch { return {}; }
     });
     const [pinnedConversations, setPinnedConversations] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('pinnedConversations') || '[]'); } catch { return []; }
+        try {
+            const storedUser = localStorage.getItem('user');
+            const u = storedUser && storedUser !== "undefined" ? JSON.parse(storedUser) : null;
+            if (u && Array.isArray(u.pinnedConvs)) return u.pinnedConvs;
+            return JSON.parse(localStorage.getItem('pinnedConversations') || '[]');
+        } catch { return []; }
     });
 
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: "", message: "", onConfirm: null, isAlert: false });
@@ -2868,21 +2873,23 @@ const Chat = () => {
         });
     };
 
-    const handlePinConversation = (e, convId) => {
+    const handlePinConversation = async (e, convId) => {
         e.stopPropagation();
         setActiveConvMenu(null);
-        if (pinnedConversations.includes(convId)) {
-            const updated = pinnedConversations.filter(id => id !== convId);
+        if (!user) return;
+        if (!pinnedConversations.includes(convId) && pinnedConversations.length >= 3) {
+            setConfirmDialog({ isOpen: true, isAlert: true, title: "Đã đạt giới hạn", message: "Chỉ được ghim tối đa 3 cuộc trò chuyện.", onConfirm: closeConfirm, theme, bgPanel });
+            return;
+        }
+        try {
+            const res = await api.post('/users/pin-conversation', { userId: user.id, roomId: convId });
+            const updated = res.data.pinnedConvs;
             setPinnedConversations(updated);
             localStorage.setItem('pinnedConversations', JSON.stringify(updated));
-        } else {
-            if (pinnedConversations.length >= 3) {
-                setConfirmDialog({ isOpen: true, isAlert: true, title: "Đã đạt giới hạn", message: "Chỉ được ghim tối đa 3 cuộc trò chuyện.", onConfirm: closeConfirm, theme, bgPanel });
-                return;
-            }
-            const updated = [...pinnedConversations, convId];
-            setPinnedConversations(updated);
-            localStorage.setItem('pinnedConversations', JSON.stringify(updated));
+            // Đồng bộ vào user đã lưu để lần mở sau vẫn đúng
+            try { localStorage.setItem('user', JSON.stringify({ ...user, pinnedConvs: updated })); } catch { /* ignore */ }
+        } catch (err) {
+            setConfirmDialog({ isOpen: true, isAlert: true, title: "Lỗi", message: err.response?.data?.error || "Không thể ghim. Thử lại sau.", onConfirm: closeConfirm, theme, bgPanel });
         }
     };
 

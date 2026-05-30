@@ -8,13 +8,13 @@ import { useApp } from './AppContext';
 import api from '../services/api';
 
 const HomeScreen = ({ navigation }: any) => {
-    const { isDark, user, onlineUsers, socket, t } = useApp();
+    const { isDark, user, updateUser, onlineUsers, socket, t } = useApp();
     const [conversations, setConversations] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [showMenu, setShowMenu] = useState(false);
     const [hiddenConvs, setHiddenConvs] = useState<string[]>([]);
-    const [pinnedConvs, setPinnedConvs] = useState<string[]>([]);
+    const pinnedConvs: string[] = Array.isArray(user?.pinnedConvs) ? user.pinnedConvs : [];
 
     // MODAL STATE
     const [profileModalVisible, setProfileModalVisible] = useState(false);
@@ -35,7 +35,6 @@ const HomeScreen = ({ navigation }: any) => {
     const loadLocalPrefs = async () => {
         try {
             const h = await AsyncStorage.getItem('hiddenConvs'); if (h) setHiddenConvs(JSON.parse(h));
-            const p = await AsyncStorage.getItem('pinnedConvs'); if (p) setPinnedConvs(JSON.parse(p));
         } catch {}
     };
 
@@ -88,19 +87,18 @@ const HomeScreen = ({ navigation }: any) => {
     };
 
     const handlePinConversation = async (roomId: string) => {
-        let updated: string[];
-        if (pinnedConvs.includes(roomId)) {
-            updated = pinnedConvs.filter(id => id !== roomId);
-        } else {
-            if (pinnedConvs.length >= 3) {
-                Alert.alert("Đã đạt giới hạn", "Chỉ được ghim tối đa 3 cuộc trò chuyện.");
-                return;
-            }
-            updated = [...pinnedConvs, roomId];
+        if (!user) return;
+        if (!pinnedConvs.includes(roomId) && pinnedConvs.length >= 3) {
+            Alert.alert("Đã đạt giới hạn", "Chỉ được ghim tối đa 3 cuộc trò chuyện.");
+            return;
         }
-        setPinnedConvs(updated);
-        await AsyncStorage.setItem('pinnedConvs', JSON.stringify(updated));
         setOptionModalVisible(false);
+        try {
+            const res = await api.post('/users/pin-conversation', { userId: user.id, roomId });
+            await updateUser({ pinnedConvs: res.data.pinnedConvs });
+        } catch (e: any) {
+            Alert.alert("Lỗi", e.response?.data?.error || "Không thể ghim. Thử lại sau.");
+        }
     };
 
     const showContextMenu = (item: any, partnerId: string, isOnline: boolean) => {

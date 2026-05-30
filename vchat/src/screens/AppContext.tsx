@@ -26,7 +26,7 @@ export const AppProvider = ({ children }: any) => {
     const [user, setUser] = useState<any>(null);
     const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
     const socketRef = useRef<Socket | null>(null);
-
+    const [socketObj, setSocketObj] = useState<any>(null);
     // ==========================================
     // STATE QUẢN LÝ WEBRTC (CUỘC GỌI)
     // ==========================================
@@ -62,7 +62,9 @@ export const AppProvider = ({ children }: any) => {
                 setUser(currUser);
 
                 // THAY ĐỊA CHỈ IP WIFI CỦA BẠN VÀO ĐÂY
-                socketRef.current = io('http://10.71.29.137:5000', { transports: ['websocket'], reconnectionAttempts: 5 });
+                socketRef.current = io('http://44.200.231.22:5000', { transports: ['websocket'], reconnectionAttempts: 5 });
+
+                setSocketObj(socketRef.current);
 
                 socketRef.current.on('connect', () => {
                     socketRef.current?.emit('register_user', currUser.id);
@@ -92,17 +94,17 @@ export const AppProvider = ({ children }: any) => {
                 // ----------------------------------------
                 // 3. XỬ LÝ TÍN HIỆU WEBRTC (OFFER, ANSWER, ICE)
                 // ----------------------------------------
-                socketRef.current.on('webrtc_signal', async (signal: any) => {
-                    if (!pcRef.current) return;
+                socketRef.current.on('webrtc_signal', async ({ signal }: any) => {
+                    if (!pcRef.current || !signal) return;
                     if (signal.type === 'offer') {
                         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                         const answer = await pcRef.current.createAnswer();
                         await pcRef.current.setLocalDescription(answer);
-                        socketRef.current?.emit('webrtc_signal', { targetId: callStateRef.current?.partner?.id, signal: answer });
+                        socketRef.current?.emit('webrtc_signal', { targetId: callStateRef.current?.partner?.id, senderId: user.id, signal: answer, isGroup: false });
                     } else if (signal.type === 'answer') {
                         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                     } else if (signal.candidate) {
-                        await pcRef.current.addIceCandidate(new RTCIceCandidate(signal.candidate));
+                        await pcRef.current.addIceCandidate(new RTCIceCandidate(signal));
                     }
                 });
 
@@ -138,20 +140,22 @@ export const AppProvider = ({ children }: any) => {
 
             stream.getTracks().forEach((track: any) => pc.addTrack(track, stream));
 
-            pc.ontrack = (event: any) => {
+            (pc as any).addEventListener('track', (event: any) => {
                 if (event.streams && event.streams[0]) {
                     setRemoteStream(event.streams[0]);
                 }
-            };
+            });
 
-            pc.onicecandidate = (event: any) => {
+            (pc as any).addEventListener('icecandidate', (event: any) => {
                 if (event.candidate) {
                     socketRef.current?.emit('webrtc_signal', {
                         targetId: callStateRef.current?.partner?.id,
-                        signal: { candidate: event.candidate },
+                        senderId: user.id,
+                        signal: event.candidate,
+                        isGroup: false,
                     });
                 }
-            };
+            });
         } catch (e) {
             console.warn('setupWebrtc error:', e);
         }
@@ -162,7 +166,7 @@ export const AppProvider = ({ children }: any) => {
         if (!pcRef.current) return;
         const offer = await pcRef.current.createOffer();
         await pcRef.current.setLocalDescription(offer);
-        socketRef.current?.emit('webrtc_signal', { targetId: callStateRef.current?.partner?.id, signal: offer });
+        socketRef.current?.emit('webrtc_signal', { targetId: callStateRef.current?.partner?.id, senderId: user.id, signal: offer, isGroup: false });
     };
 
     const startCall = async (receiverId: string, receiverName: string, isVideo: boolean) => {
@@ -172,10 +176,12 @@ export const AppProvider = ({ children }: any) => {
     };
 
     const acceptCall = async () => {
-        socketRef.current?.emit('accept_call', { callerId: callStateRef.current.partner.id, receiverId: user.id });
+        // Khởi tạo WebRTC TRƯỚC để pcRef sẵn sàng nhận offer, tránh race condition
+        await setupWebrtc(callStateRef.current.isVideo);
         setCallStateTracked((prev: any) => ({ ...prev, status: 'incall', startTime: Date.now() }));
         startTimer();
-        await setupWebrtc(callStateRef.current.isVideo);
+        // Báo cho người gọi biết đã bắt máy -> họ sẽ tạo offer
+        socketRef.current?.emit('accept_call', { callerId: callStateRef.current.partner.id, receiverId: user.id });
     };
 
     const cleanupCall = () => {
@@ -216,17 +222,29 @@ export const AppProvider = ({ children }: any) => {
     };
 
     const toggleMute = () => {
-        if (localStream) {
-            localStream.getAudioTracks().forEach((track: any) => track.enabled = isMuted);
-            setIsMuted(!isMuted);
-        }
+        if (!localStream) return;
+        const newEnabled = isMuted; // đang mute -> bật lại; đang bật -> tắt
+        localStream.getAudioTracks().forEach((track: any) => track.enabled = newEnabled);
+        setIsMuted(!isMuted);
+        socketRef.current?.emit('webrtc_signal', {
+            targetId: callStateRef.current?.partner?.id,
+            senderId: user.id,
+            signal: { customType: 'media_toggle', media: 'audio', isEnabled: newEnabled },
+            isGroup: false,
+        });
     };
 
     const toggleVideo = () => {
-        if (localStream) {
-            localStream.getVideoTracks().forEach((track: any) => track.enabled = isVideoOff);
-            setIsVideoOff(!isVideoOff);
-        }
+        if (!localStream) return;
+        const newEnabled = isVideoOff; // đang tắt cam -> bật lại; đang bật -> tắt
+        localStream.getVideoTracks().forEach((track: any) => track.enabled = newEnabled);
+        setIsVideoOff(!isVideoOff);
+        socketRef.current?.emit('webrtc_signal', {
+            targetId: callStateRef.current?.partner?.id,
+            senderId: user.id,
+            signal: { customType: 'media_toggle', media: 'video', isEnabled: newEnabled },
+            isGroup: false,
+        });
     };
 
     const formatTime = (seconds: number) => { const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m}:${s.toString().padStart(2, '0')}`; };
@@ -234,8 +252,17 @@ export const AppProvider = ({ children }: any) => {
     const changeLanguage = (val: string) => { setLang(val); AsyncStorage.setItem('lang', val); };
     const t = (key: string) => (translations as any)[lang][key] || key;
 
+    // Cập nhật user trong context + AsyncStorage (dùng cho ghim, đổi avatar...)
+    const updateUser = async (patch: any) => {
+        setUser((prev: any) => {
+            const merged = { ...(prev || {}), ...patch };
+            AsyncStorage.setItem('user', JSON.stringify(merged));
+            return merged;
+        });
+    };
+
     return (
-        <AppContext.Provider value={{ isDark, toggleTheme, lang, changeLanguage, t, user, onlineUsers, socket: socketRef.current, startCall }}>
+        <AppContext.Provider value={{ isDark, toggleTheme, lang, changeLanguage, t, user, updateUser, onlineUsers, socket: socketObj, startCall }}>
             {children}
 
             {callState && (

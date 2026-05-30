@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "5767a28f-e44e-406b-b40f-ab99a452e891"
+      }
+    },
+    "android": {
+      "package": "com.hongngoc02.webapp"
+    }
+  }
+}

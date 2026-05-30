@@ -45,7 +45,7 @@ const ContactScreen = ({ navigation }: any) => {
         }
 
         try {
-            const res = await api.post('/friends/search', { email: searchEmail });
+            const res = await api.post('/friends/search', { email: searchEmail.trim().toLowerCase() });
             setSearchResult(res.data);
         } catch (e) {
             Alert.alert("Lỗi", "Không tìm thấy user!");
