@@ -1937,10 +1937,9 @@ const SERVER_ORIGIN = (import.meta.env.VITE_API_URL || 'https://api.cnmvchat.cli
 const socket = io(SERVER_ORIGIN, { transports: ['websocket', 'polling'] });
 const rtcConfig = { iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:openrelay.metered.ca:80' },
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'stun:44.200.231.22:3478' },
+    { urls: 'turn:44.200.231.22:3478?transport=udp', username: 'vchat', credential: 'VChatTurn2026' },
+    { urls: 'turn:44.200.231.22:3478?transport=tcp', username: 'vchat', credential: 'VChatTurn2026' },
 ] };
 
 // =================================================================

@@ -11,15 +11,13 @@ const translations = {
     en: { chat: "Messages", contact: "Contacts", settings: "Settings", lang: "Language: English", theme: "Theme: Dark", save: "Save Profile", logout: "Logout", email: "Email", password: "Password", forgotPass: "Forgot Password?", login: "Login", noAccount: "Don't have an account?", register: "Register now", search: "Search...", addFriend: "Add Friend", online: "Online", offline: "Offline", friendRequests: "Friend Requests", searchFriend: "Enter email to search...", searchBtn: "Search", friends: "FRIENDS", pending: "PENDING", sent: "SENT", emptyList: "List is empty.", editProfile: "Edit Profile", language: "Language", darkMode: "Dark Mode", vietnamese: "Tiếng Việt", english: "English", forgotPassword: "Forgot Password", sendOtp: "Send OTP", resetPassword: "Reset Password", otpCode: "OTP Code", newPassword: "New Password", confirmNewPassword: "Confirm New Password" }
 };
 
-// Cấu hình STUN + TURN (OpenRelay free) để gọi được kể cả khi 2 máy khác mạng/NAT
+// Cấu hình STUN + TURN (coturn tự host trên EC2) để gọi được kể cả khi 2 máy khác mạng/NAT
 const peerConstraints = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:openrelay.metered.ca:80' },
-        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'stun:44.200.231.22:3478' },
+        { urls: 'turn:44.200.231.22:3478?transport=udp', username: 'vchat', credential: 'VChatTurn2026' },
+        { urls: 'turn:44.200.231.22:3478?transport=tcp', username: 'vchat', credential: 'VChatTurn2026' },
     ]
 };
 
