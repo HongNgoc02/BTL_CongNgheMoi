@@ -1933,7 +1933,8 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 
-const socket = io(import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api','') : 'https://api.cnmvchat.click');
+const SERVER_ORIGIN = (import.meta.env.VITE_API_URL || 'https://api.cnmvchat.click/api').replace(/\/api\/?$/, '');
+const socket = io(SERVER_ORIGIN, { transports: ['websocket', 'polling'] });
 const rtcConfig = { iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:openrelay.metered.ca:80' },
