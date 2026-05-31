@@ -2,8 +2,8 @@ import axios from "axios";
 // Import bộ nhớ dành riêng cho Mobile
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ⚠️ Địa chỉ backend (HTTPS qua Cloudflare Tunnel). Nếu chạy lại tunnel sẽ ra URL mới -> đổi ở ĐÂY.
-export const SERVER_URL = "https://zinc-buf-aerospace-jam.trycloudflare.com";
+// Địa chỉ backend cố định (HTTPS qua Nginx + Let's Encrypt trên EC2). URL này KHÔNG đổi.
+export const SERVER_URL = "https://api.cnmvchat.click";
 
 const api = axios.create({
   baseURL: `${SERVER_URL}/api`,

@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://zinc-buf-aerospace-jam.trycloudflare.com/api",
+  baseURL: import.meta.env.VITE_API_URL || "https://api.cnmvchat.click/api",
   //baseURL: import.meta.env.VITE_API_URL || 'http://192.168.1.4:5000/api',
   //baseURL: import.meta.env.VITE_API_URL || 'http://10.17.87.137:5000/api',
 });
