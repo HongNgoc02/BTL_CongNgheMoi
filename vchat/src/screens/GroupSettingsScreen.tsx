@@ -110,7 +110,7 @@ const GroupSettingsScreen = ({ navigation, route }: any) => {
     // =====================================
     // QUẢN LÝ THÀNH VIÊN
     // =====================================
-    const friendsNotInGroup = friends.filter(f => !roomData?.members?.some((m: any) => m.id === f.user.id));
+    const friendsNotInGroup = friends.filter(f => f.user && !roomData?.members?.some((m: any) => m.id === f.user.id));
 
     const toggleNewMember = (id: string) => {
         setSelectedNewMembers(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]);
